@@ -166,6 +166,29 @@ func readKeysFromFile(keyfile string) (key string, err error) {
 	return
 }
 
+func generateCertificates(filenamePub, filenameSecret string) {
+
+	publicKey, secretKey, err := zmq.NewCurveKeypair()
+	checkErr(err)
+
+	f, err := os.Create(filenamePub)
+	checkErr(err)
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	_, err = fmt.Fprintf(w, "%v\n", publicKey)
+	checkErr(err)
+	w.Flush()
+
+	f, err = os.Create(filenameSecret)
+	checkErr(err)
+	defer f.Close()
+	w = bufio.NewWriter(f)
+	_, err = fmt.Fprintf(w, "%v\n", secretKey)
+	checkErr(err)
+	w.Flush()
+
+}
+
 func clientCommand(c *cli.Context) {
 	serverPublicKey, err := readKeysFromFile("server_cert.pub")
 	checkErr(err)
@@ -177,6 +200,9 @@ func clientCommand(c *cli.Context) {
 func serverCommand(c *cli.Context) {
 	//serverPublicKey, serverSecretKey, err := zmq.NewCurveKeypair()
 	//fmt.Println(serverPublicKey, serverSecretKey)
+	if c.Bool("generate-certificate") {
+		generateCertificates("server_cert.pub", "server_cert")
+	}
 	serverSecretKey, err := readKeysFromFile("server_cert")
 	serverPublicKey, err := readKeysFromFile("server_cert.pub")
 	checkErr(err)
@@ -203,6 +229,12 @@ func main() {
 			Name:   "server",
 			Usage:  "run a chat server",
 			Action: serverCommand,
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "generate-certificate, g",
+					Usage: "Generate certificate files.",
+				},
+			},
 		},
 		{
 			Name:   "client",
