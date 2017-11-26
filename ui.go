@@ -13,10 +13,6 @@ const (
 
 var listItems = []string{}
 
-func ClientSendText(text string) {
-
-}
-
 func showUI(receiveChan chan string, sendChan chan string) {
 
 	err := t.Init()
@@ -92,11 +88,24 @@ func showUI(receiveChan chan string, sendChan chan string) {
 		t.Render(ib)
 	})
 
+	t.Handle("/sz/chat", func(event t.Event) {
+		ob.Text += event.Data.(string) + "\n"
+		t.Render(ob)
+	})
+
 	t.Handle("/sys/kbd", func(event t.Event) {
 		kbd := event.Data.(t.EvtKbd) //event.Path[len(event.Path)-1:]
 		ib.Text += kbd.KeyStr
 		t.Render(ib)
 	})
 
+	go receiveChat(receiveChan)
+
 	t.Loop()
+}
+
+func receiveChat(ch chan string) {
+	for message := range ch {
+		t.SendCustomEvt("/sz/chat", message)
+	}
 }

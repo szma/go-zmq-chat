@@ -156,9 +156,7 @@ func (clnt *Client) receiveMessages(ch chan string) {
 		checkErr(err)
 		message := &Message{}
 		json.Unmarshal([]byte(message_string), message)
-		if message.User != clnt.username {
-			ch <- fmt.Sprintf("%v:\t%v\n", message.User, message.Msg)
-		}
+		ch <- fmt.Sprintf("%v: %v\n", message.User, message.Msg)
 	}
 }
 
