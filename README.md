@@ -28,7 +28,9 @@ If the $GOPATH/bin folder is in your $PATH run
 
 
 ```bash
-$ go-zmq-chat
+$ go-zmq-chat server # add -g to generate new certificates.
+$ # clients need to have the correct server_cert.pub!
+$ go-zmq-chat client --username mike --url 192.168.12.23 # IP of your server
 ```
 
 
