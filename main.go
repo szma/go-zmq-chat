@@ -41,6 +41,45 @@ func checkErr(err error) {
 	}
 }
 
+func readKeysFromFile(keyfile string) (key string, err error) {
+	file, err := os.Open(keyfile)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+	key = scanner.Text()
+
+	if err = scanner.Err(); err != nil {
+		return
+	}
+
+	return
+}
+
+func generateCertificates(filenamePub, filenameSecret string) {
+	publicKey, secretKey, err := zmq.NewCurveKeypair()
+	checkErr(err)
+
+	f, err := os.Create(filenamePub)
+	checkErr(err)
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	_, err = fmt.Fprintf(w, "%v\n", publicKey)
+	checkErr(err)
+	w.Flush()
+
+	f, err = os.Create(filenameSecret)
+	checkErr(err)
+	defer f.Close()
+	w = bufio.NewWriter(f)
+	_, err = fmt.Fprintf(w, "%v\n", secretKey)
+	checkErr(err)
+	w.Flush()
+}
+
 func (srv *Server) getNextMessage() *Message {
 	message_string, err := srv.chatSocket.Recv(0)
 	checkErr(err)
@@ -111,22 +150,34 @@ func (clnt *Client) sendMessage(message_txt string) {
 	}
 }
 
-func (clnt *Client) receiveMessages() {
+func (clnt *Client) receiveMessages(ch chan string) {
 	for {
 		message_string, err := clnt.displaySocket.Recv(0)
 		checkErr(err)
 		message := &Message{}
 		json.Unmarshal([]byte(message_string), message)
 		if message.User != clnt.username {
-			fmt.Printf("%v:\t%v\n", message.User, message.Msg)
+			ch <- fmt.Sprintf("%v:\t%v\n", message.User, message.Msg)
 		}
 	}
 }
 
-func dummyChatter(text string, client *Client) {
+func (clnt *Client) sendMessages(ch chan string) {
+	for message := range ch {
+		clnt.sendMessage(message)
+	}
+}
+
+func dummyWriter(text string, ch chan string) {
 	for i := 0; i < 10; i++ {
-		client.sendMessage(text + " " + strconv.Itoa(i))
+		ch <- (text + " " + strconv.Itoa(i))
 		time.Sleep(time.Millisecond * 200)
+	}
+}
+
+func dummyReader(ch chan string) {
+	for msg := range ch {
+		fmt.Println(msg)
 	}
 }
 
@@ -135,64 +186,35 @@ func dummyTest(c *cli.Context) {
 	checkErr(err)
 	client := NewClient("alice", "localhost", serverPublicKey)
 	client2 := NewClient("bob", "localhost", serverPublicKey)
-	client3 := NewClient("charlie", "localhost", serverPublicKey)
 	server := NewServer(serverPublicKey, serverSecretKey)
-	go client.receiveMessages()
-	go client2.receiveMessages()
-	go client3.receiveMessages()
-	go dummyChatter("hi all, i'm alice", client)
-	go dummyChatter("that's great! i am charlie", client3)
+	receiveChan := make(chan string, 1)
+	receiveChan2 := make(chan string, 1)
+	sendChan := make(chan string, 1)
+	//sendChan2 := make(chan string, 1)
+	go client.receiveMessages(receiveChan)
+	go client2.receiveMessages(receiveChan2)
+	go client.sendMessages(sendChan)
+	go dummyWriter("hi all, i'm alice", sendChan)
+	go dummyReader(receiveChan2)
+	//go dummyChatter("that's great! i am charlie", client3)
 	for {
 		message := server.getNextMessage()
 		server.updateDisplays(message)
 	}
-}
-
-func readKeysFromFile(keyfile string) (key string, err error) {
-	file, err := os.Open(keyfile)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	scanner.Scan()
-	key = scanner.Text()
-
-	if err = scanner.Err(); err != nil {
-		return
-	}
-
-	return
-}
-
-func generateCertificates(filenamePub, filenameSecret string) {
-	publicKey, secretKey, err := zmq.NewCurveKeypair()
-	checkErr(err)
-
-	f, err := os.Create(filenamePub)
-	checkErr(err)
-	defer f.Close()
-	w := bufio.NewWriter(f)
-	_, err = fmt.Fprintf(w, "%v\n", publicKey)
-	checkErr(err)
-	w.Flush()
-
-	f, err = os.Create(filenameSecret)
-	checkErr(err)
-	defer f.Close()
-	w = bufio.NewWriter(f)
-	_, err = fmt.Fprintf(w, "%v\n", secretKey)
-	checkErr(err)
-	w.Flush()
+	log.Fatal("start either 'server' or 'client'")
 }
 
 func clientCommand(c *cli.Context) {
 	serverPublicKey, err := readKeysFromFile("server_cert.pub")
 	checkErr(err)
 	client := NewClient(c.String("username"), c.String("server-address"), serverPublicKey)
-	go client.receiveMessages()
-	dummyChatter("hi all", client)
+
+	receiveChan := make(chan string, 1)
+	sendChan := make(chan string, 1)
+	go client.receiveMessages(receiveChan)
+	go client.sendMessages(sendChan)
+	//dummyChatter("hi all", client)
+	showUI(receiveChan, sendChan)
 }
 
 func serverCommand(c *cli.Context) {
