@@ -140,8 +140,8 @@ func dummyTest(c *cli.Context) {
 	go client.receiveMessages()
 	go client2.receiveMessages()
 	go client3.receiveMessages()
-	go dummyChatter("hi all", client)
-	go dummyChatter("that's great!", client3)
+	go dummyChatter("hi all, i'm alice", client)
+	go dummyChatter("that's great! i am charlie", client3)
 	for {
 		message := server.getNextMessage()
 		server.updateDisplays(message)
