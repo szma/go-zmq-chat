@@ -147,15 +147,34 @@ func dummyTest(c *cli.Context) {
 	}
 }
 
+func clientCommand(c *cli.Context) {
+
+}
+
+func serverCommand(c *cli.Context) {
+
+}
+
 func main() {
 	zmq.AuthSetVerbose(false)
 	zmq.AuthStart()
-	//dummyTest()
 	app := cli.NewApp()
 	app.Name = "go-zmq-chat"
 	app.Usage = "Small chat program written in Go using ZeroMQ and encryption."
 	app.Version = "0.1"
 	app.Action = dummyTest
+	app.Commands = []cli.Command{
+		{
+			Name:   "server",
+			Usage:  "run a chat server",
+			Action: serverCommand,
+		},
+		{
+			Name:   "client",
+			Usage:  "run a chat client",
+			Action: clientCommand,
+		},
+	}
 	app.Run(os.Args)
 
 	zmq.AuthStop()
