@@ -148,7 +148,7 @@ func dummyTest(c *cli.Context) {
 	}
 }
 
-func readKeysFromFile(keyfile string) (serverPublicKey string, serverSecretKey string, err error) {
+func readKeysFromFile(keyfile string) (key string, err error) {
 	file, err := os.Open(keyfile)
 	if err != nil {
 		return
@@ -157,9 +157,7 @@ func readKeysFromFile(keyfile string) (serverPublicKey string, serverSecretKey s
 
 	scanner := bufio.NewScanner(file)
 	scanner.Scan()
-	serverPublicKey = scanner.Text()
-	scanner.Scan()
-	serverSecretKey = scanner.Text()
+	key = scanner.Text()
 
 	if err = scanner.Err(); err != nil {
 		return
@@ -169,7 +167,7 @@ func readKeysFromFile(keyfile string) (serverPublicKey string, serverSecretKey s
 }
 
 func clientCommand(c *cli.Context) {
-	serverPublicKey, _, err := readKeysFromFile("server.cert")
+	serverPublicKey, err := readKeysFromFile("server_cert.pub")
 	checkErr(err)
 	client := NewClient("alice", "localhost", serverPublicKey)
 	go client.receiveMessages()
@@ -179,9 +177,10 @@ func clientCommand(c *cli.Context) {
 func serverCommand(c *cli.Context) {
 	//serverPublicKey, serverSecretKey, err := zmq.NewCurveKeypair()
 	//fmt.Println(serverPublicKey, serverSecretKey)
-	serverPublicKey, serverSecretKey, err := readKeysFromFile("server.cert")
-
+	serverSecretKey, err := readKeysFromFile("server_cert")
+	serverPublicKey, err := readKeysFromFile("server_cert.pub")
 	checkErr(err)
+
 	server := NewServer(serverPublicKey, serverSecretKey)
 	log.Println("Server started...")
 	for {
