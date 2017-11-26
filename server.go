@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	zmq "github.com/pebbe/zmq4"
+	"github.com/urfave/cli"
 	"log"
+	"os"
 	"runtime"
 	"strconv"
 	"time"
@@ -127,9 +129,7 @@ func dummyChatter(text string, client *Client) {
 	}
 }
 
-func main() {
-	zmq.AuthSetVerbose(true)
-	zmq.AuthStart()
+func dummyTest(c *cli.Context) {
 	serverPublicKey, serverSecretKey, err := zmq.NewCurveKeypair()
 	checkErr(err)
 	client := NewClient("alice", "localhost", serverPublicKey)
@@ -145,5 +145,18 @@ func main() {
 		message := server.getNextMessage()
 		server.updateDisplays(message)
 	}
+}
+
+func main() {
+	zmq.AuthSetVerbose(false)
+	zmq.AuthStart()
+	//dummyTest()
+	app := cli.NewApp()
+	app.Name = "go-zmq-chat"
+	app.Usage = "Small chat program written in Go using ZeroMQ and encryption."
+	app.Version = "0.1"
+	app.Action = dummyTest
+	app.Run(os.Args)
+
 	zmq.AuthStop()
 }
