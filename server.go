@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	zmq "github.com/pebbe/zmq4"
@@ -147,16 +148,51 @@ func dummyTest(c *cli.Context) {
 	}
 }
 
-func clientCommand(c *cli.Context) {
+func readKeysFromFile(keyfile string) (serverPublicKey string, serverSecretKey string, err error) {
+	file, err := os.Open(keyfile)
+	if err != nil {
+		return
+	}
+	defer file.Close()
 
+	scanner := bufio.NewScanner(file)
+	scanner.Scan()
+	serverPublicKey = scanner.Text()
+	scanner.Scan()
+	serverSecretKey = scanner.Text()
+
+	if err = scanner.Err(); err != nil {
+		return
+	}
+
+	return
+}
+
+func clientCommand(c *cli.Context) {
+	serverPublicKey, _, err := readKeysFromFile("server.cert")
+	checkErr(err)
+	client := NewClient("alice", "localhost", serverPublicKey)
+	go client.receiveMessages()
+	dummyChatter("hi all", client)
 }
 
 func serverCommand(c *cli.Context) {
+	//serverPublicKey, serverSecretKey, err := zmq.NewCurveKeypair()
+	//fmt.Println(serverPublicKey, serverSecretKey)
+	serverPublicKey, serverSecretKey, err := readKeysFromFile("server.cert")
 
+	checkErr(err)
+	server := NewServer(serverPublicKey, serverSecretKey)
+	log.Println("Server started...")
+	for {
+		message := server.getNextMessage()
+		log.Println(message)
+		server.updateDisplays(message)
+	}
 }
 
 func main() {
-	zmq.AuthSetVerbose(false)
+	zmq.AuthSetVerbose(true)
 	zmq.AuthStart()
 	app := cli.NewApp()
 	app.Name = "go-zmq-chat"
