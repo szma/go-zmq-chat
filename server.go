@@ -118,7 +118,7 @@ func (clnt *Client) receiveMessages() {
 		message := &Message{}
 		json.Unmarshal([]byte(message_string), message)
 		if message.User != clnt.username {
-			fmt.Printf("%v's chat: %v:\t%v\n", clnt.username, message.User, message.Msg)
+			fmt.Printf("%v:\t%v\n", message.User, message.Msg)
 		}
 	}
 }
@@ -167,7 +167,6 @@ func readKeysFromFile(keyfile string) (key string, err error) {
 }
 
 func generateCertificates(filenamePub, filenameSecret string) {
-
 	publicKey, secretKey, err := zmq.NewCurveKeypair()
 	checkErr(err)
 
@@ -186,20 +185,17 @@ func generateCertificates(filenamePub, filenameSecret string) {
 	_, err = fmt.Fprintf(w, "%v\n", secretKey)
 	checkErr(err)
 	w.Flush()
-
 }
 
 func clientCommand(c *cli.Context) {
 	serverPublicKey, err := readKeysFromFile("server_cert.pub")
 	checkErr(err)
-	client := NewClient("alice", "localhost", serverPublicKey)
+	client := NewClient(c.String("username"), c.String("server-address"), serverPublicKey)
 	go client.receiveMessages()
 	dummyChatter("hi all", client)
 }
 
 func serverCommand(c *cli.Context) {
-	//serverPublicKey, serverSecretKey, err := zmq.NewCurveKeypair()
-	//fmt.Println(serverPublicKey, serverSecretKey)
 	if c.Bool("generate-certificate") {
 		generateCertificates("server_cert.pub", "server_cert")
 	}
@@ -240,6 +236,18 @@ func main() {
 			Name:   "client",
 			Usage:  "run a chat client",
 			Action: clientCommand,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "server-address, url, s",
+					Usage: "Server address",
+					Value: "localhost",
+				},
+				cli.StringFlag{
+					Name:  "username, u",
+					Usage: "User name",
+					Value: "guest",
+				},
+			},
 		},
 	}
 	app.Run(os.Args)
