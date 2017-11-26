@@ -7,8 +7,9 @@ Kudos to https://github.com/jnthnwn/zmq-chat for this simple python version.
 This is under development and not finished, yet. That means you cannot chat right now, but there are some dummy clients.
 Next:
   * [x] Add encryption 
-  * [ ] Split client and server program
-  * [ ] Add user interface
+  * [x] Split client and server commnd
+  * [x] Add simple user interface
+  * [ ] Send/show user list
 
 
 Disclaimer

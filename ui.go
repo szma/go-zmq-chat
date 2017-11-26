@@ -3,6 +3,7 @@ package main
 import (
 	t "github.com/gizak/termui"
 	"log"
+	"strings"
 )
 
 const (
@@ -89,7 +90,11 @@ func showUI(receiveChan chan string, sendChan chan string) {
 	})
 
 	t.Handle("/sz/chat", func(event t.Event) {
-		ob.Text += event.Data.(string) + "\n"
+		lines := strings.Split(ob.Text, "\n")
+		if len(lines) > ob.Height-2 {
+			ob.Text = strings.Join(lines[1:], "\n")
+		}
+		ob.Text += event.Data.(string)
 		t.Render(ob)
 	})
 
