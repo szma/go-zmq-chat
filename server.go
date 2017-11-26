@@ -53,10 +53,14 @@ func (srv *Server) updateDisplays(msg *Message) {
 	srv.chatSocket.Send("ok", 0)
 }
 
-func NewServer() *Server {
+func NewServer(serverPublicKey, serverSecretKey string) *Server {
 	server := &Server{}
 	server.chatSocket, _ = zmq.NewSocket(zmq.REP)
 	server.displaySocket, _ = zmq.NewSocket(zmq.PUB)
+
+	zmq.AuthCurveAdd("domain1", zmq.CURVE_ALLOW_ANY)
+	server.chatSocket.ServerAuthCurve("domain1", serverSecretKey)
+	server.displaySocket.ServerAuthCurve("domain1", serverSecretKey)
 
 	err := server.chatSocket.Bind("tcp://*:5556")
 	checkErr(err)
@@ -68,14 +72,19 @@ func NewServer() *Server {
 	return server
 }
 
-func NewClient(username string, serverAddress string) *Client {
+func NewClient(username string, serverAddress string, serverPublicKey string) *Client {
 	client := &Client{}
 
 	client.chatSocket, _ = zmq.NewSocket(zmq.REQ)
 	client.displaySocket, _ = zmq.NewSocket(zmq.SUB)
-	client.displaySocket.SetSubscribe("")
 
-	err := client.chatSocket.Connect("tcp://" + serverAddress + ":5556")
+	clientPublicKey, clientSecretKey, err := zmq.NewCurveKeypair()
+	checkErr(err)
+	client.chatSocket.ClientAuthCurve(serverPublicKey, clientPublicKey, clientSecretKey)
+	client.displaySocket.ClientAuthCurve(serverPublicKey, clientPublicKey, clientSecretKey)
+
+	client.displaySocket.SetSubscribe("")
+	err = client.chatSocket.Connect("tcp://" + serverAddress + ":5556")
 	checkErr(err)
 	err = client.displaySocket.Connect("tcp://" + serverAddress + ":5555")
 	checkErr(err)
@@ -119,10 +128,14 @@ func dummyChatter(text string, client *Client) {
 }
 
 func main() {
-	client := NewClient("alice", "localhost")
-	client2 := NewClient("bob", "localhost")
-	client3 := NewClient("charlie", "localhost")
-	server := NewServer()
+	zmq.AuthSetVerbose(true)
+	zmq.AuthStart()
+	serverPublicKey, serverSecretKey, err := zmq.NewCurveKeypair()
+	checkErr(err)
+	client := NewClient("alice", "localhost", serverPublicKey)
+	client2 := NewClient("bob", "localhost", serverPublicKey)
+	client3 := NewClient("charlie", "localhost", serverPublicKey)
+	server := NewServer(serverPublicKey, serverSecretKey)
 	go client.receiveMessages()
 	go client2.receiveMessages()
 	go client3.receiveMessages()
@@ -132,4 +145,5 @@ func main() {
 		message := server.getNextMessage()
 		server.updateDisplays(message)
 	}
+	zmq.AuthStop()
 }
