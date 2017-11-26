@@ -7,7 +7,7 @@ import (
 	"log"
 	"runtime"
 	"strconv"
-	//"time"
+	"time"
 )
 
 type Message struct {
@@ -105,21 +105,29 @@ func (clnt *Client) receiveMessages() {
 		checkErr(err)
 		message := &Message{}
 		json.Unmarshal([]byte(message_string), message)
-		fmt.Printf("%v:\t%v\n", message.User, message.Msg)
+		if message.User != clnt.username {
+			fmt.Printf("%v's chat: %v:\t%v\n", clnt.username, message.User, message.Msg)
+		}
 	}
 }
 
-func dummyChatter(client *Client) {
+func dummyChatter(text string, client *Client) {
 	for i := 0; i < 10; i++ {
-		client.sendMessage("Hi all" + strconv.Itoa(i))
+		client.sendMessage(text + " " + strconv.Itoa(i))
+		time.Sleep(time.Millisecond * 200)
 	}
 }
 
 func main() {
 	client := NewClient("alice", "localhost")
+	client2 := NewClient("bob", "localhost")
+	client3 := NewClient("charlie", "localhost")
 	server := NewServer()
-	go dummyChatter(client)
 	go client.receiveMessages()
+	go client2.receiveMessages()
+	go client3.receiveMessages()
+	go dummyChatter("hi all", client)
+	go dummyChatter("that's great!", client3)
 	for {
 		message := server.getNextMessage()
 		server.updateDisplays(message)
