@@ -9,8 +9,6 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"strconv"
-	"time"
 )
 
 type Message struct {
@@ -166,42 +164,6 @@ func (clnt *Client) sendMessages(ch chan string) {
 	}
 }
 
-func dummyWriter(text string, ch chan string) {
-	for i := 0; i < 10; i++ {
-		ch <- (text + " " + strconv.Itoa(i))
-		time.Sleep(time.Millisecond * 200)
-	}
-}
-
-func dummyReader(ch chan string) {
-	for msg := range ch {
-		fmt.Println(msg)
-	}
-}
-
-func dummyTest(c *cli.Context) {
-	serverPublicKey, serverSecretKey, err := zmq.NewCurveKeypair()
-	checkErr(err)
-	client := NewClient("alice", "localhost", serverPublicKey)
-	client2 := NewClient("bob", "localhost", serverPublicKey)
-	server := NewServer(serverPublicKey, serverSecretKey)
-	receiveChan := make(chan string, 1)
-	receiveChan2 := make(chan string, 1)
-	sendChan := make(chan string, 1)
-	//sendChan2 := make(chan string, 1)
-	go client.receiveMessages(receiveChan)
-	go client2.receiveMessages(receiveChan2)
-	go client.sendMessages(sendChan)
-	go dummyWriter("hi all, i'm alice", sendChan)
-	go dummyReader(receiveChan2)
-	//go dummyChatter("that's great! i am charlie", client3)
-	for {
-		message := server.getNextMessage()
-		server.updateDisplays(message)
-	}
-	log.Fatal("start either 'server' or 'client'")
-}
-
 func clientCommand(c *cli.Context) {
 	serverPublicKey, err := readKeysFromFile("server_cert.pub")
 	checkErr(err)
@@ -211,7 +173,6 @@ func clientCommand(c *cli.Context) {
 	sendChan := make(chan string, 1)
 	go client.receiveMessages(receiveChan)
 	go client.sendMessages(sendChan)
-	//dummyChatter("hi all", client)
 	showUI(receiveChan, sendChan)
 }
 
@@ -233,13 +194,13 @@ func serverCommand(c *cli.Context) {
 }
 
 func main() {
-	zmq.AuthSetVerbose(true)
+	zmq.AuthSetVerbose(false)
 	zmq.AuthStart()
 	app := cli.NewApp()
 	app.Name = "go-zmq-chat"
 	app.Usage = "Small chat program written in Go using ZeroMQ and encryption."
 	app.Version = "0.1"
-	app.Action = dummyTest
+	app.Action = func(c *cli.Context) { fmt.Println("Start with client or server subcommand. --help for help.") }
 	app.Commands = []cli.Command{
 		{
 			Name:   "server",
