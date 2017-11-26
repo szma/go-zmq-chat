@@ -8,7 +8,6 @@ This is under development and not finished, yet. That means you cannot chat righ
 Next:
   * Add security
   * Add user interface
-  * 
 
 
 Disclaimer
@@ -30,5 +29,4 @@ If the $GOPATH/bin folder is in your $PATH run
 $ go-zmq-chat
 ```
 
-This stores all your jpgs from /home/user/pictures in /home/user/previewpictures resized with maximum width/height of 1024.
 
