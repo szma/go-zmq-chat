@@ -9,7 +9,8 @@ Next:
   * [x] Add encryption 
   * [x] Split client and server commnd
   * [x] Add simple user interface
-  * [ ] Send/show user list
+  * [x] Send/show user list
+  * [ ] Allow users to register names.
 
 
 Disclaimer
