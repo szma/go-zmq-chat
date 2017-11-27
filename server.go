@@ -5,25 +5,55 @@ import (
 	zmq "github.com/pebbe/zmq4"
 	"github.com/urfave/cli"
 	"log"
+	"time"
 )
 
 type Server struct {
 	chatSocket    *zmq.Socket
 	displaySocket *zmq.Socket
+	usersLastSeen map[string]time.Time
 }
 
-func (srv *Server) getNextMessage() *Message {
+func (srv *Server) updateUsers() []string {
+
+	// Remove users that didnt call for 5 seconds
+	now := time.Now()
+	for k := range srv.usersLastSeen {
+		if now.Sub(srv.usersLastSeen[k]) > 5*time.Second {
+			delete(srv.usersLastSeen, k)
+		}
+	}
+
+	// Create list of users from map
+	keys := make([]string, 0, len(srv.usersLastSeen))
+	for k := range srv.usersLastSeen {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+func (srv *Server) checkNextMessage() {
 	message_string, err := srv.chatSocket.RecvMessage(0)
 	checkErr(err)
 	identity := message_string[0]
 	message := &Message{}
 	json.Unmarshal([]byte(message_string[1]), message)
 
-	srv.chatSocket.SendMessage([]string{identity, "ok"}, 0)
-	//log.Println(identity)
-	//log.Println(message)
-	log.Println(message_string)
-	return message
+	srv.usersLastSeen[message.User] = time.Now()
+
+	if message.Type == 0 {
+		//Normal message
+		log.Println(message_string)
+		srv.updateDisplays(message)
+		srv.chatSocket.SendMessage([]string{identity, "ok"}, 0)
+	} else if message.Type == 1 {
+		//Keep alive message: return users
+		users := srv.updateUsers()
+		message_json, _ := json.Marshal(users)
+		srv.chatSocket.SendMessage([]string{identity, string(message_json)}, 0)
+	}
+
 }
 
 func (srv *Server) updateDisplays(msg *Message) {
@@ -46,6 +76,8 @@ func NewServer(serverPublicKey, serverSecretKey string) *Server {
 	err = server.displaySocket.Bind("tcp://*:5555")
 	checkErr(err)
 
+	server.usersLastSeen = make(map[string]time.Time)
+
 	return server
 }
 
@@ -60,7 +92,6 @@ func serverCommand(c *cli.Context) {
 	server := NewServer(serverPublicKey, serverSecretKey)
 	log.Println("Server started...")
 	for {
-		message := server.getNextMessage()
-		server.updateDisplays(message)
+		server.checkNextMessage()
 	}
 }

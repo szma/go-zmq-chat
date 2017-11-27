@@ -13,6 +13,7 @@ import (
 type Message struct {
 	User string
 	Msg  string
+	Type int
 }
 
 func checkErr(err error) {

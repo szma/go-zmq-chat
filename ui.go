@@ -3,6 +3,7 @@ package main
 import (
 	t "github.com/gizak/termui"
 	"log"
+	"sort"
 	"strings"
 )
 
@@ -12,9 +13,9 @@ const (
 	ih = 3
 )
 
-var listItems = []string{}
+var users = []string{"walter", "heinrich"}
 
-func showUI(receiveChan chan string, sendChan chan string) {
+func showUI(receiveChan chan string, sendChan chan string, userChan chan []string) {
 
 	err := t.Init()
 	if err != nil {
@@ -31,7 +32,7 @@ func showUI(receiveChan chan string, sendChan chan string) {
 	lb.BorderLabelFg = t.ColorGreen
 	lb.BorderFg = t.ColorGreen
 	lb.ItemFgColor = t.ColorWhite
-	lb.Items = listItems
+	lb.Items = users
 
 	ib := t.NewPar("")
 	ib.Height = ih
@@ -98,6 +99,13 @@ func showUI(receiveChan chan string, sendChan chan string) {
 		t.Render(ob)
 	})
 
+	t.Handle("/sz/users", func(event t.Event) {
+		users = event.Data.([]string)
+		sort.Strings(users)
+		lb.Items = users
+		t.Render(lb)
+	})
+
 	t.Handle("/sys/kbd", func(event t.Event) {
 		kbd := event.Data.(t.EvtKbd) //event.Path[len(event.Path)-1:]
 		ib.Text += kbd.KeyStr
@@ -105,6 +113,7 @@ func showUI(receiveChan chan string, sendChan chan string) {
 	})
 
 	go receiveChat(receiveChan)
+	go receiveUsers(userChan)
 
 	t.Loop()
 }
@@ -112,5 +121,11 @@ func showUI(receiveChan chan string, sendChan chan string) {
 func receiveChat(ch chan string) {
 	for message := range ch {
 		t.SendCustomEvt("/sz/chat", message)
+	}
+}
+
+func receiveUsers(ch chan []string) {
+	for message := range ch {
+		t.SendCustomEvt("/sz/users", message)
 	}
 }

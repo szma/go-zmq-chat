@@ -6,6 +6,7 @@ import (
 	zmq "github.com/pebbe/zmq4"
 	"github.com/urfave/cli"
 	"log"
+	"time"
 )
 
 type Client struct {
@@ -52,6 +53,26 @@ func (clnt *Client) sendMessage(message_txt string) {
 	}
 }
 
+func (clnt *Client) keepAlive(ch chan []string) {
+	for {
+		message := &Message{
+			Msg:  "",
+			User: clnt.username,
+			Type: 1,
+		}
+
+		message_json, err := json.Marshal(message)
+		checkErr(err)
+		clnt.chatSocket.Send(string(message_json), 0)
+		// Wait for users list
+		msgs, _ := clnt.chatSocket.RecvMessage(0)
+		messager := &[]string{}
+		json.Unmarshal([]byte(msgs[0]), messager)
+		ch <- *messager
+		time.Sleep(2 * time.Second)
+	}
+}
+
 func (clnt *Client) receiveMessages(ch chan string) {
 	for {
 		message_string, err := clnt.displaySocket.Recv(0)
@@ -75,7 +96,9 @@ func clientCommand(c *cli.Context) {
 
 	receiveChan := make(chan string, 1)
 	sendChan := make(chan string, 1)
+	usersChan := make(chan []string, 1)
 	go client.receiveMessages(receiveChan)
 	go client.sendMessages(sendChan)
-	showUI(receiveChan, sendChan)
+	go client.keepAlive(usersChan)
+	showUI(receiveChan, sendChan, usersChan)
 }
