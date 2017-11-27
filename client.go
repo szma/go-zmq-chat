@@ -17,13 +17,15 @@ type Client struct {
 func NewClient(username string, serverAddress string, serverPublicKey string) *Client {
 	client := &Client{}
 
-	client.chatSocket, _ = zmq.NewSocket(zmq.REQ)
+	client.chatSocket, _ = zmq.NewSocket(zmq.DEALER)
 	client.displaySocket, _ = zmq.NewSocket(zmq.SUB)
 
 	clientPublicKey, clientSecretKey, err := zmq.NewCurveKeypair()
 	checkErr(err)
 	client.chatSocket.ClientAuthCurve(serverPublicKey, clientPublicKey, clientSecretKey)
 	client.displaySocket.ClientAuthCurve(serverPublicKey, clientPublicKey, clientSecretKey)
+
+	client.chatSocket.SetIdentity(clientPublicKey)
 
 	client.displaySocket.SetSubscribe("")
 	err = client.chatSocket.Connect("tcp://" + serverAddress + ":5556")
@@ -44,8 +46,8 @@ func (clnt *Client) sendMessage(message_txt string) {
 	message_json, err := json.Marshal(message)
 	checkErr(err)
 	clnt.chatSocket.Send(string(message_json), 0)
-	msgs, _ := clnt.chatSocket.Recv(0)
-	if msgs != "ok" {
+	msgs, _ := clnt.chatSocket.RecvMessage(0)
+	if msgs[0] != "ok" {
 		log.Println("server response unexpected:", msgs)
 	}
 }

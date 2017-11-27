@@ -13,10 +13,16 @@ type Server struct {
 }
 
 func (srv *Server) getNextMessage() *Message {
-	message_string, err := srv.chatSocket.Recv(0)
+	message_string, err := srv.chatSocket.RecvMessage(0)
 	checkErr(err)
+	identity := message_string[0]
 	message := &Message{}
-	json.Unmarshal([]byte(message_string), message)
+	json.Unmarshal([]byte(message_string[1]), message)
+
+	srv.chatSocket.SendMessage([]string{identity, "ok"}, 0)
+	//log.Println(identity)
+	//log.Println(message)
+	log.Println(message_string)
 	return message
 }
 
@@ -24,12 +30,11 @@ func (srv *Server) updateDisplays(msg *Message) {
 	message_json, err := json.Marshal(msg)
 	checkErr(err)
 	srv.displaySocket.Send(string(message_json), 0)
-	srv.chatSocket.Send("ok", 0)
 }
 
 func NewServer(serverPublicKey, serverSecretKey string) *Server {
 	server := &Server{}
-	server.chatSocket, _ = zmq.NewSocket(zmq.REP)
+	server.chatSocket, _ = zmq.NewSocket(zmq.ROUTER)
 	server.displaySocket, _ = zmq.NewSocket(zmq.PUB)
 
 	zmq.AuthCurveAdd("domain1", zmq.CURVE_ALLOW_ANY)
@@ -40,8 +45,6 @@ func NewServer(serverPublicKey, serverSecretKey string) *Server {
 	checkErr(err)
 	err = server.displaySocket.Bind("tcp://*:5555")
 	checkErr(err)
-	//defer server.chatSocket.Close()
-	//defer server.displaySocket.Close()
 
 	return server
 }
@@ -58,7 +61,6 @@ func serverCommand(c *cli.Context) {
 	log.Println("Server started...")
 	for {
 		message := server.getNextMessage()
-		log.Println(message)
 		server.updateDisplays(message)
 	}
 }
