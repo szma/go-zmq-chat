@@ -83,10 +83,10 @@ func NewServer(serverPublicKey, serverSecretKey string) *Server {
 
 func serverCommand(c *cli.Context) {
 	if c.Bool("generate-certificate") {
-		generateCertificates("server_cert.pub", "server_cert")
+		generateCertificates(c.String("servercert-public"), c.String("servercert-secret"))
 	}
-	serverSecretKey, err := readKeysFromFile("server_cert")
-	serverPublicKey, err := readKeysFromFile("server_cert.pub")
+	serverPublicKey, err := readKeysFromFile(c.String("servercert-public"))
+	serverSecretKey, err := readKeysFromFile(c.String("servercert-secret"))
 	checkErr(err)
 
 	server := NewServer(serverPublicKey, serverSecretKey)

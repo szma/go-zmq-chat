@@ -85,6 +85,16 @@ func main() {
 					Name:  "generate-certificate, g",
 					Usage: "Generate certificate files.",
 				},
+				cli.StringFlag{
+					Name:  "servercert-public, pub",
+					Usage: "Public server certificate file",
+					Value: "./server_cert.pub",
+				},
+				cli.StringFlag{
+					Name:  "servercert-secret, sec",
+					Usage: "Secret server certificate file",
+					Value: "./server_cert",
+				},
 			},
 		},
 		{
@@ -101,6 +111,11 @@ func main() {
 					Name:  "username, u",
 					Usage: "User name",
 					Value: "guest",
+				},
+				cli.StringFlag{
+					Name:  "servercert-public, pub",
+					Usage: "Public server certificate file",
+					Value: "./server_cert.pub",
 				},
 			},
 		},

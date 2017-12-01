@@ -90,7 +90,7 @@ func (clnt *Client) sendMessages(ch chan string) {
 }
 
 func clientCommand(c *cli.Context) {
-	serverPublicKey, err := readKeysFromFile("server_cert.pub")
+	serverPublicKey, err := readKeysFromFile(c.String("servercert-public"))
 	checkErr(err)
 	client := NewClient(c.String("username"), c.String("server-address"), serverPublicKey)
 
