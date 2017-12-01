@@ -76,7 +76,9 @@ func showUI(receiveChan chan string, sendChan chan string, userChan chan []strin
 	})
 
 	t.Handle("/sys/kbd/C-8", func(event t.Event) {
-		ib.Text = ""
+		if len(ib.Text) > 0 {
+			ib.Text = ib.Text[:len(ib.Text)-1]
+		}
 		t.Render(ib)
 	})
 
@@ -107,7 +109,7 @@ func showUI(receiveChan chan string, sendChan chan string, userChan chan []strin
 	})
 
 	t.Handle("/sys/kbd", func(event t.Event) {
-		kbd := event.Data.(t.EvtKbd) //event.Path[len(event.Path)-1:]
+		kbd := event.Data.(t.EvtKbd)
 		ib.Text += kbd.KeyStr
 		t.Render(ib)
 	})
