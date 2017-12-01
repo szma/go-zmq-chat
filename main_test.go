@@ -38,7 +38,6 @@ func TestDummy(t *testing.T) {
 	go dummyReader(receiveChan2)
 	//go dummyChatter("that's great! i am charlie", client3)
 	for i := 0; i < 10; i++ {
-		message := server.getNextMessage()
-		server.updateDisplays(message)
+		server.checkNextMessage()
 	}
 }
