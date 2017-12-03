@@ -15,7 +15,7 @@ const (
 
 var users = []string{"walter", "heinrich"}
 
-func showUI(receiveChan chan string, sendChan chan string, userChan chan []string) {
+func showUI(client *Client) {
 
 	err := t.Init()
 	if err != nil {
@@ -70,7 +70,7 @@ func showUI(receiveChan chan string, sendChan chan string, userChan chan []strin
 	})
 
 	t.Handle("/sys/kbd/<enter>", func(event t.Event) {
-		sendChan <- ib.Text
+		client.sendChan <- ib.Text
 		ib.Text = ""
 		t.Render(ib)
 	})
@@ -114,8 +114,8 @@ func showUI(receiveChan chan string, sendChan chan string, userChan chan []strin
 		t.Render(ib)
 	})
 
-	go receiveChat(receiveChan)
-	go receiveUsers(userChan)
+	go receiveChat(client.receiveChan)
+	go receiveUsers(client.usersChan)
 
 	t.Loop()
 }

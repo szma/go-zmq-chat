@@ -13,6 +13,10 @@ type Client struct {
 	chatSocket    *zmq.Socket
 	displaySocket *zmq.Socket
 	username      string
+
+	receiveChan chan string
+	sendChan    chan string
+	usersChan   chan []string
 }
 
 func NewClient(username string, serverAddress string, serverPublicKey string) *Client {
@@ -35,6 +39,10 @@ func NewClient(username string, serverAddress string, serverPublicKey string) *C
 	checkErr(err)
 	client.username = username
 
+	client.receiveChan = make(chan string, 1)
+	client.sendChan = make(chan string, 1)
+	client.usersChan = make(chan []string, 1)
+
 	return client
 }
 
@@ -53,7 +61,7 @@ func (clnt *Client) sendMessage(message_txt string) {
 	}
 }
 
-func (clnt *Client) keepAlive(ch chan []string) {
+func (clnt *Client) keepAlive() {
 	for {
 		message := &Message{
 			Msg:  "",
@@ -63,28 +71,30 @@ func (clnt *Client) keepAlive(ch chan []string) {
 
 		message_json, err := json.Marshal(message)
 		checkErr(err)
+		log.Println("Send ", clnt.username, string(message_json))
 		clnt.chatSocket.Send(string(message_json), 0)
 		// Wait for users list
 		msgs, _ := clnt.chatSocket.RecvMessage(0)
-		messager := &[]string{}
-		json.Unmarshal([]byte(msgs[0]), messager)
-		ch <- *messager
+		log.Println("Recv ", clnt.username, msgs)
+		message_users := &[]string{}
+		json.Unmarshal([]byte(msgs[0]), message_users)
+		clnt.usersChan <- *message_users
 		time.Sleep(2 * time.Second)
 	}
 }
 
-func (clnt *Client) receiveMessages(ch chan string) {
+func (clnt *Client) receiveMessages() {
 	for {
 		message_string, err := clnt.displaySocket.Recv(0)
 		checkErr(err)
 		message := &Message{}
 		json.Unmarshal([]byte(message_string), message)
-		ch <- fmt.Sprintf("%v: %v\n", message.User, message.Msg)
+		clnt.receiveChan <- fmt.Sprintf("%v: %v\n", message.User, message.Msg)
 	}
 }
 
-func (clnt *Client) sendMessages(ch chan string) {
-	for message := range ch {
+func (clnt *Client) sendMessages() {
+	for message := range clnt.sendChan {
 		clnt.sendMessage(message)
 	}
 }
@@ -94,11 +104,8 @@ func clientCommand(c *cli.Context) {
 	checkErr(err)
 	client := NewClient(c.String("username"), c.String("server-address"), serverPublicKey)
 
-	receiveChan := make(chan string, 1)
-	sendChan := make(chan string, 1)
-	usersChan := make(chan []string, 1)
-	go client.receiveMessages(receiveChan)
-	go client.sendMessages(sendChan)
-	go client.keepAlive(usersChan)
-	showUI(receiveChan, sendChan, usersChan)
+	go client.receiveMessages()
+	go client.sendMessages()
+	go client.keepAlive()
+	showUI(client)
 }
